@@ -44,12 +44,14 @@ public:
 
 
 void main_nonshuffle(int argc, char **argv) {
-	Engine e(std::string(argv[1]), atoi(argv[2]), 1);
+	int num_threads = 1;
+	if (argc == 5) num_threads = atoi(argv[4]);
+	Engine e(std::string(argv[1]), atoi(argv[2]), 1, num_threads);
 	std::cout << Logger::generate_log_del(std::string("finish preprocessing"), 1) << std::endl;
 
 	ResourceManager rm;
-		// get running time (wall time)
-		auto start_motif = std::chrono::high_resolution_clock::now();
+	// get running time (wall time)
+	auto start_motif = std::chrono::high_resolution_clock::now();
 
 	MC mPhase(e, atoi(argv[3]));
 	Aggregation agg(e, false);
@@ -57,13 +59,14 @@ void main_nonshuffle(int argc, char **argv) {
 	//init: get the edges stream
 	std::cout << "\n\n" << Logger::generate_log_del(std::string("init"), 1) << std::endl;
 	Update_Stream up_stream = mPhase.init();
-	mPhase.printout_upstream(up_stream);
+	//mPhase.printout_upstream(up_stream);
 
 	Update_Stream up_stream_new;
 	Aggregation_Stream agg_stream;
 
 //	unsigned int max_iterations = mPhase.get_max_size() * (mPhase.get_max_size() - 1) / 2;
 	unsigned int max_iterations = mPhase.get_max_size();
+	std::cout << "cxh: num_iterations = " << max_iterations << std::endl;
 
 	for(unsigned int i = 1; i < max_iterations; ++i){
 		std::cout << "\n\n" << Logger::generate_log_del(std::string("Iteration ") + std::to_string(i), 1) << std::endl;
@@ -77,7 +80,7 @@ void main_nonshuffle(int argc, char **argv) {
 		//aggregate
 		std::cout << "\n" << Logger::generate_log_del(std::string("aggregating"), 2) << std::endl;
 		agg_stream = agg.aggregate(up_stream_new, mPhase.get_sizeof_in_tuple());
-		agg.printout_aggstream(agg_stream, mPhase.get_sizeof_in_tuple());
+		agg.printout_aggstream(agg_stream, mPhase.get_sizeof_in_tuple(), true);
 
 //		//print out counts info
 //		std::cout << "\n" << Logger::generate_log_del(std::string("printing"), 2) << std::endl;
@@ -163,8 +166,8 @@ void main_shuffle(int argc, char **argv) {
 
 
 int main(int argc, char **argv){
-	if(argc != 4) {
-		fprintf(stderr, "bin/motif_count [input graph(adj list format)] [num of partitions] [size of motif]\n");
+	if(argc < 4 || argc > 5) {
+		fprintf(stderr, "bin/motif_count [input graph(adj list format)] [num of partitions] [size of motif] [num of threads]\n");
 		exit(-1);
 	}
 //	main_shuffle(argc, argv);

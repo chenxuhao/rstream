@@ -60,7 +60,8 @@ namespace RStream {
 
 		Update_Stream collect(Update_Stream in_update_stream);
 
-		void printout_upstream(Update_Stream in_update_stream);
+		void printout_upstream(Update_Stream in_update_stream, bool verbose = false);
+		void printout_tuples(Update_Stream in_update_stream); // cxh
 
 		void delete_upstream(Update_Stream in_update_stream);
 

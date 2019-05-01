@@ -18,9 +18,9 @@ namespace RStream {
 		unsigned Engine::tuple_long = 0;
 		unsigned Engine::tuple_filter = 0;
 
-		Engine::Engine(std::string _filename, int num_parts, int input_format) : filename(_filename) {
+		Engine::Engine(std::string _filename, int num_parts, int input_format, int nthreads) : filename(_filename), num_threads(nthreads) {
 //			num_threads = std::thread::hardware_concurrency();
-			num_threads = 16;
+//			num_threads = 16;
 			num_write_threads = 1;
 			num_exec_threads = num_threads;
 
@@ -30,28 +30,27 @@ namespace RStream {
 //			num_partitions = num_parts;
 //			num_vertices_per_part = num_vertices / num_partitions;
 //			Preprocessing proc(_filename, num_parts, num_vertices);
+//			edge_type = static_cast<EdgeType>(proc.getEdgeType());
+//			edge_unit = proc.getEdgeUnit();
 
 			const std::string meta_file = _filename + ".meta";
 			if(!file_exists(meta_file)) {
 //				Preproc proc(_filename, num_vertices, num_partitions, false, false);
 //				Preprocessing proc(_filename, num_partitions, num_vertices);
-				Preprocessing_new proc(filename, num_parts, input_format);
+				Preprocessing_new proc(filename, num_parts, input_format, num_threads);
 			}
 
 			// get meta data from .meta file
 			read_meta_file(meta_file);
 
-//			edge_type = static_cast<EdgeType>(proc.getEdgeType());
-//			edge_unit = proc.getEdgeUnit();
 			vertex_unit = 0;
 //			vertex_unit = 8;
 //			num_vertices_per_part = proc.getNumVerPerPartition();
-
-//			std::cout << "Input format: " << (input_format) << std::endl;
+			std::cout << "Input format: " << (input_format) << std::endl;
 			std::cout << "Number of vertices: " << num_vertices << std::endl;
 			std::cout << "Number of partitions: " << num_partitions << std::endl;
-//			std::cout << "Edge type: " << edge_type << std::endl;
-//			std::cout << "Number of bytes per edge: " << edge_unit << std::endl;
+			std::cout << "Edge type: " << edge_type << std::endl;
+			std::cout << "Number of bytes per edge: " << edge_unit << std::endl;
 			std::cout << "Number of exec threads: " << num_exec_threads << std::endl;
 			std::cout << "Number of write threads: " << num_write_threads << std::endl;
 			std::cout << std::endl;
@@ -72,8 +71,13 @@ namespace RStream {
 			//delete .meta
 			FileUtil::delete_file(filename + ".meta");
 
+			// .update_stream_*
+			for(int i = 0; i < update_count; ++i) {
+				FileUtil::delete_file(filename + ".0.update_stream_" + std::to_string(i));
+			}
+
 			//delete partitions
-			for(int i = 0; i < num_partitions; ++i){
+			for(int i = 0; i < num_partitions; ++i) {
 				FileUtil::delete_file(filename + "." + std::to_string(i));
 			}
 		}
@@ -276,6 +280,7 @@ namespace RStream {
 
 
 		void Engine::read_meta_file(const std::string & filename) {
+			std::cout << "Reading " << filename << std::endl;
 			FILE * fd = fopen(filename.c_str(), "r");
 			assert(fd != NULL );
 			int counter = 0;

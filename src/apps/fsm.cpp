@@ -55,6 +55,7 @@ void main_nonshuffle(int argc, char **argv) {
 	Aggregation agg(e, true);
 
 	int threshold = atoi(argv[4]);
+	std::cout << "cxh: minsup = " << threshold << std::endl;
 
 	//get the non-shuffled edges stream
 	std::cout << "\n\n" << Logger::generate_log_del(std::string("init"), 1) << std::endl;
@@ -75,6 +76,7 @@ void main_nonshuffle(int argc, char **argv) {
 
 //	unsigned int max_iterations = mPhase.get_max_size() * (mPhase.get_max_size() - 1) / 2;
 	unsigned int max_iterations = mPhase.get_max_size();
+	std::cout << "cxh: num_iterations = " << max_iterations-1 << std::endl;
 
 	for(unsigned int i = 1; i < max_iterations; ++i){
 		std::cout << "\n\n" << Logger::generate_log_del(std::string("Iteration ") + std::to_string(i), 1) << std::endl;

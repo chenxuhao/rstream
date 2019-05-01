@@ -32,7 +32,8 @@ namespace RStream {
 
 		Update_Stream aggregate_filter(Update_Stream up_stream, Aggregation_Stream agg_stream, int sizeof_in_tuple, int threshold);
 
-		void printout_aggstream(Aggregation_Stream agg_stream, int sizeof_in_tuple);
+		void printout_aggstream(Aggregation_Stream agg_stream, int sizeof_in_tuple, bool verbose = false);
+		void printout_tuples(Aggregation_Stream agg_stream, int sizeof_agg);
 
 		void delete_aggstream(Aggregation_Stream agg_stream);
 

@@ -131,7 +131,6 @@ int main(int argc, char ** argv) {
 		fprintf(stderr, "usage: bin/triangle_count [input graph(edge list format) [num of partitions]]\n");
 		exit(-1);
 	}
-
 	Engine e(std::string(argv[1]), atoi(argv[2]), 0);
 	std::cout << Logger::generate_log_del(std::string("finish preprocessing"), 1) << std::endl;
 
@@ -154,13 +153,12 @@ int main(int argc, char ** argv) {
 	std::cout << "\n\n" << Logger::generate_log_del(std::string("second join"), 1) << std::endl;
 	R2 r2(e);
 	Update_Stream out_stream_2 = r2.join(out_stream_1);
-//	printUpdateStream<ROutUpdate_TriC>(e.num_partitions, e.filename, out_stream_2);
-
 	auto end = std::chrono::high_resolution_clock::now();
+	printUpdateStream<ROutUpdate_TriC>(e.num_partitions, e.filename, out_stream_2);
 	std::chrono::duration<double> diff = end - start;
 	std::cout << "Finish triangle counting. Running time : " << diff.count() << " s\n";
-
 	std::cout << "Triangle Counting : " << Global_Info::count(out_stream_2, sizeof(ROutUpdate_TriC), e) << std::endl;
+	e.clean_files();
 }
 
 

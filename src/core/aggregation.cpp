@@ -9,7 +9,11 @@
 
 namespace RStream {
 
-		Aggregation::Aggregation(Engine & e, bool label_f) : context(e), label_flag(label_f) {}
+		Aggregation::Aggregation(Engine & e, bool label_f) : context(e), label_flag(label_f) {
+			std::cout << "Aggregation: num_threads = " << context.num_exec_threads << "\n";
+			std::cout << "Aggregation: num_partitions = " << context.num_partitions << "\n";
+			std::cout << "Aggregation: num_write_threads = " << context.num_write_threads << "\n";
+		}
 
 		Aggregation::~Aggregation() {}
 
@@ -42,12 +46,46 @@ namespace RStream {
 			return up_stream_filtered;
 		}
 
-		void Aggregation::printout_aggstream(Aggregation_Stream agg_stream, int sizeof_in_tuple){
+		void Aggregation::printout_aggstream(Aggregation_Stream agg_stream, int sizeof_in_tuple, bool verbose){
 			int sizeof_agg = get_out_size(sizeof_in_tuple);
 //			std::cout << "Number of tuples in agg "<< agg_stream << ": \t" << get_count(agg_stream, sizeof_agg) << std::endl;
 //			std::cout << "Size of agg: \t" << sizeof_agg << std::endl;
 			unsigned int count = get_count(agg_stream, sizeof_agg);
 			std::cout << "a, " << agg_stream << ", " << count << ", " << sizeof_agg << ", " << (count * sizeof_agg) << std::endl;
+			if (verbose) printout_tuples(agg_stream, sizeof_agg);
+		}
+
+		void Aggregation::printout_tuples(Update_Stream in_agg_stream, int sizeof_agg) {
+			for(int partition_id = 0; partition_id < context.num_partitions; partition_id++) {
+				int fd_agg = open((context.filename + "." + std::to_string(partition_id) + ".aggregate_stream_" + std::to_string(in_agg_stream)).c_str(), O_RDONLY);
+				assert(fd_agg > 0);
+				long agg_file_size = io_manager::get_filesize(fd_agg);
+				char * agg_local_buf = (char *)memalign(PAGE_SIZE, IO_SIZE);
+				long real_io_size = MPhase::get_real_io_size(IO_SIZE, sizeof_agg);
+				int count = agg_file_size / real_io_size + 1;
+				//std::cout << "agg_file_size = " << agg_file_size << "\n";
+				//std::cout << "real_io_size = " << real_io_size << "\n";
+				//std::cout << "sizeof_agg = " << sizeof_agg << "\n";
+				//std::cout << "count = " << count << "\n";
+				long offset = 0;
+				long valid_io_size = 0;
+				for (int counter = 0; counter < count; counter++) {
+					if (counter == count - 1)
+						valid_io_size = agg_file_size - real_io_size * (count - 1);
+					else
+						valid_io_size = real_io_size;
+					assert(valid_io_size % sizeof_agg == 0);
+					io_manager::read_from_file(fd_agg, agg_local_buf, valid_io_size, offset);
+					offset += valid_io_size;
+					for (long pos = 0; pos < valid_io_size; pos += sizeof_agg) {
+						std::pair<Canonical_Graph, int> in_agg_pair;
+						get_an_in_agg_pair(agg_local_buf + pos, in_agg_pair, sizeof_agg);
+						std::cout << "{" << in_agg_pair.first << " --> " << in_agg_pair.second << std::endl;
+					}
+				}
+				free(agg_local_buf);
+				close(fd_agg);
+			}
 		}
 
 		unsigned int Aggregation::get_count(Aggregation_Stream in_update_stream, int sizeof_agg){

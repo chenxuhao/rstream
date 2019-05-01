@@ -51,7 +51,7 @@ namespace RStream {
 		static unsigned tuple_long;
 		static unsigned tuple_filter;
 
-		Engine(std::string _filename, int num_parts, int input_format);
+		Engine(std::string _filename, int num_parts, int input_format, int nthreads=16);
 
 		~Engine();
 

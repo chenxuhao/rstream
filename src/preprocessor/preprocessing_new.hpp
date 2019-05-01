@@ -33,9 +33,9 @@ namespace RStream {
 		std::vector<std::pair<VertexId, VertexId>> intervals;
 
 	public:
-		Preprocessing_new(std::string & _input, int _num_partitioins, int _format) : input(_input), format(_format),minVertexId(INT_MAX), maxVertexId(INT_MIN),
+		Preprocessing_new(std::string & _input, int _num_partitioins, int _format, int nthreads = 1) : input(_input), format(_format),minVertexId(INT_MAX), maxVertexId(INT_MIN),
 			numPartitions(_num_partitioins), numVertices(0), vertices_per_partition(0), edgeType(0), edge_unit(0){
-			num_exec_threads = 3;
+			num_exec_threads = nthreads;
 			num_write_threads = 1;
 
 			atomic_init();
@@ -55,7 +55,7 @@ namespace RStream {
 
 				// check if .binary exists already
 //				if(!FileUtil::file_exists(input + ".binary")) {
-//					std::cout << "start to convert edge list file..." << std::endl;
+					std::cout << "start to convert edge list file..." << std::endl;
 					convert_edgelist();
 //					std::cout << "convert edge list file done." << std::endl;
 //				}
@@ -77,7 +77,7 @@ namespace RStream {
 
 				// check if .binary exists already
 //				if(!FileUtil::file_exists(input + ".binary")) {
-//					std::cout << "start to convert adj list file..." << std::endl;
+					std::cout << "start to convert adj list file..." << std::endl;
 					convert_adjlist();
 //					std::cout << "convert adj list file done." << std::endl;
 //				}
@@ -104,6 +104,7 @@ namespace RStream {
 
 			long counter = 0;
 			char s[1024];
+			int num_edges = 0;
 			while(fgets(s, 1024, fd) != NULL) {
 				if (s[0] == '#') continue; // Comment
 				if (s[0] == '%') continue; // Comment
@@ -122,7 +123,9 @@ namespace RStream {
 				minVertexId = std::min(minVertexId, to);
 				maxVertexId = std::max(maxVertexId, from);
 				maxVertexId = std::max(maxVertexId, to);
+				num_edges ++;
 			}
+			printf("num_edges = %d\n", num_edges);
 			numVertices = maxVertexId - minVertexId + 1;
 			degree = std::vector<int>(numVertices);
 
@@ -254,18 +257,26 @@ namespace RStream {
 			FILE* output = fopen((input + ".binary").c_str(), "wb");
 			assert(output != NULL);
 			char* adj_list = new char[maxsize+1];
+			int num_edges = 0;
+			int vid = 0;
 			while (fgets(adj_list, maxsize+1, fd) != NULL) {
 				int len = strlen(adj_list);
 				adj_list[len-1] = 0;
 				VertexId src = std::stoi(strtok(adj_list, delims));
 				BYTE srcLab = (BYTE)(std::stoi(strtok(NULL, delims)));
+				assert(src == vid++);
 
 				std::set<VertexId> neighbors;
 				char* strp;
+				int num_neighbors = 0;
 				while ((strp = strtok(NULL, delims)) != NULL) {
 					VertexId tgt = std::stoi(strp);
-					if (src == tgt) continue;
+					if (src == tgt) {
+						std::cout << "Should not contain self loop: vid = " << src << "\n";
+						continue;
+					}
 					neighbors.insert(tgt-minVertexId);
+					num_neighbors ++;
 				}
 
 				maxVertexId = std::max(maxVertexId, src);
@@ -279,8 +290,12 @@ namespace RStream {
 					fwrite((const void*) &tgt, sizeof(VertexId), 1, output);
 					fwrite((const void*) &srcLab, sizeof(BYTE), 1, output);
 					fwrite((const void*) &tgtLab, sizeof(BYTE), 1, output);
+					num_edges ++;
 				}
 			}
+			printf("num_vertices = %d\n", numVertices);
+			printf("maxVertexId = %d, minVertexId = %d\n", maxVertexId, minVertexId);
+			printf("num_edges = %d\n", num_edges);
 
 			fclose(fd);
 			fclose(output);

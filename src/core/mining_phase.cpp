@@ -142,6 +142,7 @@ namespace RStream {
 //				}
 				assert(fd_edge > 0);
 				long edge_file_size = io_manager::get_filesize(fd_edge);
+				std::cout << (context.filename + "." + std::to_string(partition_id)) << " size: " << edge_file_size << std::endl;
 
 				// edges are fully loaded into memory
 				char * edge_local_buf = (char *)malloc(edge_file_size);
@@ -476,17 +477,57 @@ namespace RStream {
 		}
 
 
-		void MPhase::printout_upstream(Update_Stream in_update_stream){
-//			std::cout << "Number of tuples in update "<< in_update_stream << ": \t" << get_count(in_update_stream) << std::endl;
-//			std::cout << "Size of tuple: \t" << sizeof_in_tuple << std::endl;
+		void MPhase::printout_upstream(Update_Stream in_update_stream, bool verbose) {
+			std::cout << "Number of tuples in update "<< in_update_stream << ": \t" << get_count(in_update_stream) << std::endl;
+			std::cout << "Size of tuple: \t" << sizeof_in_tuple << std::endl;
 			unsigned int count = get_count(in_update_stream);
 			std::cout << "u, " << in_update_stream << ", " << count << ", " << sizeof_in_tuple << ", " << (count * sizeof_in_tuple) << std::endl;
+			if(verbose) printout_tuples(in_update_stream);
 		}
 
 		void MPhase::delete_upstream(Update_Stream in_update_stream){
 			delete_upstream_static(in_update_stream, context.num_partitions, context.filename);
 		}
 
+		void MPhase::printout_tuples(Update_Stream in_update_stream) {
+			for(int partition_id = 0; partition_id < context.num_partitions; partition_id++) {
+				int fd_update = open((context.filename + "." + std::to_string(partition_id) + ".update_stream_" + std::to_string(in_update_stream)).c_str(), O_RDONLY);
+				assert(fd_update > 0);
+				long update_file_size = io_manager::get_filesize(fd_update);
+				char * update_local_buf = (char *)memalign(PAGE_SIZE, IO_SIZE);
+				long real_io_size = MPhase::get_real_io_size(IO_SIZE, sizeof_in_tuple);
+				int count = update_file_size / real_io_size + 1;
+				//int count = update_file_size / sizeof_in_tuple;
+				//std::cout << "update_file_size = " << update_file_size << "\n";
+				//std::cout << "real_io_size = " << real_io_size << "\n";
+				//std::cout << "sizeof_in_tuple = " << sizeof_in_tuple << "\n";
+				//std::cout << "count = " << count << "\n";
+				long offset = 0;
+				long valid_io_size = 0;
+				// for all streaming updates
+				for(int counter = 0; counter < count; counter++) {
+					// last streaming
+					if(counter == count - 1)
+						// TODO: potential overflow?
+						valid_io_size = update_file_size - real_io_size * (count - 1);
+					else
+						valid_io_size = real_io_size;
+					assert(valid_io_size % sizeof_in_tuple == 0);
+					int num = valid_io_size / sizeof_in_tuple;
+					std::cout << "num = " << num << "\n";
+					io_manager::read_from_file(fd_update, update_local_buf, valid_io_size, offset);
+					offset += valid_io_size;
+					for(long pos = 0; pos < valid_io_size; pos += sizeof_in_tuple) {
+						std::unordered_set<VertexId> vertices_set;
+						MTuple_join in_update_tuple(sizeof_in_tuple);
+						get_an_in_update(update_local_buf + pos, in_update_tuple, vertices_set);
+						std::cout << in_update_tuple << std::endl;
+					}
+				}
+				free(update_local_buf);
+				close(fd_update);
+			}
+		}
 
 		unsigned int MPhase::get_count(Update_Stream in_update_stream){
 			unsigned int count_total = 0;

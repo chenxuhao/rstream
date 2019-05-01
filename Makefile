@@ -1,6 +1,6 @@
 CXX=g++
 CFLAGS=-std=c++0x -O3
-CFLAGS+= -Ilib/bliss-0.73/ -Llib/bliss-0.73/
+CFLAGS+= -Ilib/bliss-0.73/ -Llib/bliss-0.73/ -I/opt/apps/ossw/libraries/boost/boost-1.61.0/c7/gcc-7.2/include
 LIBS=-lbliss -lpthread
 
 SOURCE=$(shell ls src/core/*.cpp src/struct/*.cpp src/utility/*.cpp)
