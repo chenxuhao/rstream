@@ -4,6 +4,14 @@ https://github.com/chenxuhao/RStream.git
 
 Before you build RStream, modify line 3 in Makefile to specify the path of Boost library.
 
+To build:
+
+    $ cd /net/ohm/export/iss/cxh
+	$ git clone git@github.com:chenxuhao/RStream.git
+	$ cd RStream
+	$ mkdir bin
+	$ make
+
 I have generated the input files for RStream:
 
     /net/ohm/export/iss/inputs/mtx/RStream/citeseer.sadj
@@ -14,8 +22,7 @@ I have generated the input files for RStream:
 
 You can run motif counting in RStream like this:
 
-cd /net/ohm/export/iss/cxh/RStream
-
+    $ cd /net/ohm/export/iss/cxh/RStream
     $ ./bin/motif_count /net/ohm/export/iss/inputs/mtx/RStream/citeseer.sadj 1 3 1
 
 bin/motif_count [input graph(adj list format)] [num of partitions] [size of motif] [num of threads]
